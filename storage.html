@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualiser et Exporter les Données</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 20px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 90%;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Visualiser et Exporter les Données</h1>
+    </header>
+    <div id="data-container">
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>Code-Barres</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Horodatage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Les données seront insérées ici -->
+            </tbody>
+        </table>
+    </div>
+    <button onclick="exportToExcel()">Exporter en Excel</button>
+    <button onclick="goToScannerPage()">Retour au Scanner</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function loadTableData() {
+            const scannedData = JSON.parse(localStorage.getItem("scannedData")) || [];
+            const tableBody = document.querySelector("#data-table tbody");
+            tableBody.innerHTML = ""; // Réinitialiser
+
+            scannedData.forEach((data) => {
+                const row = `
+                    <tr>
+                        <td>${data.CodeBarre}</td>
+                        <td>${data.Latitude}</td>
+                        <td>${data.Longitude}</td>
+                        <td>${data.Timestamp}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        function exportToExcel() {
+            const scannedData = JSON.parse(localStorage.getItem("scannedData")) || [];
+            if (scannedData.length === 0) {
+                alert("Aucune donnée à exporter.");
+                return;
+            }
+
+            const worksheet = XLSX.utils.json_to_sheet(scannedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Suivi_Livraisons");
+
+            XLSX.writeFile(workbook, "suivi_livraisons.xlsx");
+        }
+
+        function goToScannerPage() {
+            window.location.href = "scanner.html";
+        }
+
+        document.addEventListener("DOMContentLoaded", loadTableData);
+    </script>
+</body>
+</html>

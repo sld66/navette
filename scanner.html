@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner des Codes-Barres</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 20px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        #scanner-container {
+            margin: 20px auto;
+            width: 80%;
+            max-width: 500px;
+            height: 300px;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Scanner des Codes-Barres</h1>
+    </header>
+    <div id="scanner-container"></div>
+    <div id="result">
+        <h3>Résultat du Scan :</h3>
+        <p id="barcode-result">Aucun code-barres scanné.</p>
+    </div>
+    <button onclick="startScanner()">Lancer le Scanner</button>
+    <button onclick="stopScanner()">Arrêter le Scanner</button>
+    <button onclick="goToStoragePage()">Voir les Données</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script>
+        let scannerRunning = false;
+
+        function startScanner() {
+            if (scannerRunning) {
+                alert("Le scanner est déjà en cours !");
+                return;
+            }
+
+            Quagga.init(
+                {
+                    inputStream: {
+                        name: "Live",
+                        type: "LiveStream",
+                        target: document.querySelector("#scanner-container"), // Conteneur pour la vidéo
+                        constraints: {
+                            width: 640,
+                            height: 480,
+                            facingMode: "environment", // Caméra arrière
+                        },
+                    },
+                    decoder: {
+                        readers: ["code_128_reader", "ean_reader", "ean_8_reader"], // Formats de codes-barres
+                    },
+                },
+                function (err) {
+                    if (err) {
+                        console.error("Erreur lors de l'initialisation de Quagga:", err);
+                        return;
+                    }
+                    Quagga.start(); // Démarrer le scanner
+                    scannerRunning = true;
+                    console.log("Scanner démarré.");
+                }
+            );
+
+            Quagga.onDetected(function (data) {
+                const result = data.codeResult.code;
+                document.getElementById("barcode-result").textContent = `Code-barres détecté : ${result}`;
+                console.log("Code-barres détecté :", result);
+                stopScanner(); // Arrêter le scanner après détection
+                trackPackage(result); // Enregistrer les données
+            });
+        }
+
+        function trackPackage(barcode) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const timestamp = new Date().toLocaleString();
+
+                        // Stockage local des données
+                        const scannedData = JSON.parse(localStorage.getItem("scannedData")) || [];
+                        scannedData.push({
+                            CodeBarre: barcode,
+                            Latitude: latitude,
+                            Longitude: longitude,
+                            Timestamp: timestamp,
+                        });
+                        localStorage.setItem("scannedData", JSON.stringify(scannedData));
+
+                        alert(`Colis ${barcode} enregistré avec succès.`);
+                    },
+                    (error) => {
+                        alert("Erreur lors de la géolocalisation : " + error.message);
+                    }
+                );
+            } else {
+                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
+        }
+
+        function stopScanner() {
+            if (scannerRunning) {
+                Quagga.stop();
+                scannerRunning = false;
+                console.log("Scanner arrêté.");
+            }
+        }
+
+        function goToStoragePage() {
+            window.location.href = "storage.html";
+        }
+
+        window.addEventListener("beforeunload", stopScanner);
+    </script>
+</body>
+</html>
