@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLD NAVETTE - Carte des Livraisons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        header .btn-container {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+        }
+        header button {
+            background-color: white;
+            color: #007BFF;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        header button:hover {
+            background-color: #e0e0e0;
+        }
+        #map {
+            height: 90vh; /* La carte occupe presque toute la hauteur */
+            width: 100%;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <header>
+        <h1>SLD NAVETTE - Carte des Livraisons</h1>
+        <div class="btn-container">
+            <button onclick="goToDataPage()">Retour aux Données</button>
+        </div>
+    </header>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialisation de la carte
+        const map = L.map('map').setView([48.8566, 2.3522], 6); // Centre initial sur Paris
+
+        // Ajout d'un fond de carte (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Charger les données de géolocalisation depuis le localStorage
+        const scannedData = JSON.parse(localStorage.getItem('scannedData')) || [];
+
+        // Vérifier s'il y a des données
+        if (scannedData.length === 0) {
+            alert("Aucune donnée de géolocalisation à afficher.");
+        } else {
+            // Ajouter un marqueur pour chaque emplacement scanné
+            scannedData.forEach(data => {
+                const marker = L.marker([data.Latitude, data.Longitude]).addTo(map);
+                marker.bindPopup(`
+                    <b>Code-Barres :</b> ${data.CodeBarre}<br>
+                    <b>Horodatage :</b> ${data.Timestamp}
+                `);
+            });
+
+            // Ajuster la carte pour englober tous les marqueurs
+            const bounds = L.latLngBounds(scannedData.map(data => [data.Latitude, data.Longitude]));
+            map.fitBounds(bounds);
+        }
+
+        // Fonction pour rediriger vers la page de données
+        function goToDataPage() {
+            window.location.href = "storage.html";
+        }
+    </script>
+</body>
+</html>

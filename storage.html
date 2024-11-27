@@ -50,6 +50,7 @@
             background-color: #0056b3;
         }
     </style>
+    <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
     <header>
@@ -70,17 +71,23 @@
             </tbody>
         </table>
     </div>
-    <button onclick="exportToExcel()">Exporter en Excel</button>
+    <button onclick="authorizeAndSend()">Envoyer vers Google Sheets</button>
     <button onclick="goToScannerPage()">Retour au Scanner</button>
+    <button onclick="goToMapPage()">Carte</button>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
+        const CLIENT_ID = 'VOTRE_CLIENT_ID.apps.googleusercontent.com';
+        const API_KEY = 'VOTRE_CLE_API';
+        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+        const SPREADSHEET_ID = 'VOTRE_SHEET_ID'; // ID de votre feuille Google Sheets
+
+        // Charger les données locales
         function loadTableData() {
             const scannedData = JSON.parse(localStorage.getItem("scannedData")) || [];
             const tableBody = document.querySelector("#data-table tbody");
             tableBody.innerHTML = ""; // Réinitialiser
 
-            scannedData.forEach((data) => {
+            scannedData.forEach(data => {
                 const row = `
                     <tr>
                         <td>${data.CodeBarre}</td>
@@ -93,22 +100,64 @@
             });
         }
 
-        function exportToExcel() {
+        // Fonction pour authentifier et envoyer les données
+        function authorizeAndSend() {
+            gapi.load('client:auth2', () => {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    clientId: CLIENT_ID,
+                    discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+                    scope: SCOPES
+                }).then(() => {
+                    return gapi.auth2.getAuthInstance().signIn();
+                }).then(() => {
+                    sendDataToGoogleSheets();
+                }).catch((error) => {
+                    console.error("Erreur d'authentification :", error);
+                    alert("Erreur lors de l'authentification avec Google.");
+                });
+            });
+        }
+
+        // Envoyer les données à Google Sheets
+        function sendDataToGoogleSheets() {
             const scannedData = JSON.parse(localStorage.getItem("scannedData")) || [];
             if (scannedData.length === 0) {
-                alert("Aucune donnée à exporter.");
+                alert("Aucune donnée à envoyer.");
                 return;
             }
 
-            const worksheet = XLSX.utils.json_to_sheet(scannedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Suivi_Livraisons");
+            const values = scannedData.map(data => [
+                data.CodeBarre,
+                data.Latitude,
+                data.Longitude,
+                data.Timestamp
+            ]);
 
-            XLSX.writeFile(workbook, "suivi_livraisons.xlsx");
+            const body = {
+                values: values
+            };
+
+            gapi.client.sheets.spreadsheets.values.append({
+                spreadsheetId: SPREADSHEET_ID,
+                range: "Feuille1!A1",
+                valueInputOption: "RAW",
+                resource: body
+            }).then((response) => {
+                console.log("Données envoyées :", response);
+                alert("Données envoyées à Google Sheets avec succès.");
+            }).catch((error) => {
+                console.error("Erreur d'envoi :", error);
+                alert("Erreur lors de l'envoi des données à Google Sheets.");
+            });
         }
 
         function goToScannerPage() {
             window.location.href = "scanner.html";
+        }
+
+        function goToMapPage() {
+            window.location.href = "map.html";
         }
 
         document.addEventListener("DOMContentLoaded", loadTableData);
